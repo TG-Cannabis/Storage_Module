@@ -9,19 +9,28 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
+
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Properties;
 
 /**
- * Handles consuming messages from the configured Apache Kafka topic.
+ * Handles consuming messages from the configured Apache Kafka topic and saving to MongoDB.
  */
 public class KafkaConsumerService implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaConsumerService.class);
     private final FogProcessorConfig config;
     private KafkaConsumer<String, String> consumer;
+    
+    // MongoDB Variables
+    private MongoDatabase database;
+    private MongoCollection<Document> collection;
 
     /**
      * Constructs the Kafka Service.
@@ -31,6 +40,7 @@ public class KafkaConsumerService implements AutoCloseable {
     public KafkaConsumerService(FogProcessorConfig config) {
         this.config = Objects.requireNonNull(config, "Configuration cannot be null");
         initializeConsumer();
+        initializeMongo();
     }
 
     /**
@@ -42,9 +52,7 @@ public class KafkaConsumerService implements AutoCloseable {
         props.put(ConsumerConfig.GROUP_ID_CONFIG, config.getKafkaGroupId());
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        
-        
-        
+
         try {
             LOGGER.info("Initializing Kafka Consumer for topic: {}", config.getKafkaTopic());
             this.consumer = new KafkaConsumer<>(props);
@@ -56,22 +64,48 @@ public class KafkaConsumerService implements AutoCloseable {
     }
 
     /**
-     * Listens and processes messages from the Kafka topic.
+     * Initializes MongoDB connection.
+     */
+    private void initializeMongo() {
+        try {
+            LOGGER.info("Connecting to MongoDB...");
+            var mongoClient = MongoClients.create("mongodb://localhost:27017"); // Reemplaza con tu URI
+            this.database = mongoClient.getDatabase("fogDatabase"); // Nombre de la base de datos
+            this.collection = database.getCollection("sensorData"); // Nombre de la colección
+            LOGGER.info("Connected to MongoDB. Using database: 'fogDatabase', collection: 'sensorData'");
+        } catch (Exception e) {
+            LOGGER.error("Failed to connect to MongoDB: {}", e.getMessage(), e);
+            throw new RuntimeException("MongoDB connection failed");
+        }
+    }
+
+    /**
+     * Listens and processes messages from the Kafka topic and saves them to MongoDB.
      */
     public void listen() {
         if (this.consumer == null) {
             LOGGER.warn("Kafka consumer is not initialized. Cannot listen to topic '{}'.", config.getKafkaTopic());
             return;
         }
-        
+
         try {
+            LOGGER.info("Listening for Kafka messages...");
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<String, String> record : records) {
                     LOGGER.info("Received Kafka message: Key=[{}], Value=[{}], Partition=[{}], Offset=[{}]",
                             record.key(), record.value(), record.partition(), record.offset());
-                    
-                    // Process the message here
+
+                    // Create a MongoDB document
+                    Document sensorData = new Document("key", record.key())
+                            .append("value", record.value())
+                            .append("partition", record.partition())
+                            .append("offset", record.offset())
+                            .append("timestamp", System.currentTimeMillis());
+
+                    // Insert document into MongoDB
+                    collection.insertOne(sensorData);
+                    LOGGER.info("Message saved to MongoDB successfully.");
                 }
                 consumer.commitAsync(); // Commit offsets asynchronously
             }

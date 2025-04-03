@@ -16,6 +16,13 @@
             <version>3.0.0</version>
         </dependency>
 
+        <!-- Mongo-chan DB -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+            <version>4.9.0</version>
+        </dependency>
+
         <!-- Apache Kafka Client -->
         <dependency>
             <groupId>org.apache.kafka</groupId>
