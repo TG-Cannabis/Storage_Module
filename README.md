@@ -22,6 +22,13 @@ docker compose up -d
 
 ### 2. Clone the Repository
 
-```sh
-git clone <repository-url>
+```bash
+git clone https://github.com/TG-Cannabis/Storage_Module.git
 cd storage-module
+```
+
+### 3. Generate the jar file and execute it:
+```bash
+mvn clean package
+java -jar target/storage-module-1.0.0.jar
+```
