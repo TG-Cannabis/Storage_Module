@@ -14,9 +14,11 @@ Before running the Storage Module, ensure you have the following installed:
 
 ### 1. Start MongoDB (Docker Compose)
 
-> **⚠️ Coming Soon:** A `docker-compose.yml` file will be provided for MongoDB setup.
+Run the following command to start a **MongoDB container**:
 
-For now, ensure you have a MongoDB instance running.
+```bash
+docker compose up -d
+```
 
 ### 2. Clone the Repository
 
