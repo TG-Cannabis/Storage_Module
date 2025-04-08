@@ -32,7 +32,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>com.fog.App</mainClass>
+              <mainClass>com.tgcannabis.storage_module.App</mainClass>
             </manifest>
           </archive>
         </configuration>

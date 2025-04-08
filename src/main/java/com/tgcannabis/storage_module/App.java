@@ -1,8 +1,7 @@
-package com.fog;
+package com.tgcannabis.storage_module;
 
-
-import com.fog.config.FogProcessorConfig;
-import com.fog.kafka.KafkaConsumerService;
+import com.tgcannabis.storage_module.config.FogProcessorConfig;
+import com.tgcannabis.storage_module.kafka.KafkaConsumerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

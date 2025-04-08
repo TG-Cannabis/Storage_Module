@@ -1,6 +1,6 @@
-package com.fog.kafka;
+package com.tgcannabis.storage_module.kafka;
 
-import com.fog.config.FogProcessorConfig;
+import com.tgcannabis.storage_module.config.FogProcessorConfig;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
