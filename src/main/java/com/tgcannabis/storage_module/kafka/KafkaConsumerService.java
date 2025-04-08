@@ -1,6 +1,8 @@
 package com.tgcannabis.storage_module.kafka;
 
+import com.mongodb.client.MongoClient;
 import com.tgcannabis.storage_module.config.FogProcessorConfig;
+import com.tgcannabis.storage_module.mongo.MongoStorageService;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -15,6 +17,7 @@ import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Properties;
@@ -25,11 +28,11 @@ import java.util.Properties;
 public class KafkaConsumerService implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaConsumerService.class);
+
     private final FogProcessorConfig config;
     private KafkaConsumer<String, String> consumer;
-    
-    // MongoDB Variables
-    private MongoDatabase database;
+    private MongoStorageService storageService;
+
     private MongoCollection<Document> collection;
 
     /**
@@ -37,16 +40,16 @@ public class KafkaConsumerService implements AutoCloseable {
      *
      * @param config The application configuration. Must not be null.
      */
-    public KafkaConsumerService(FogProcessorConfig config) {
+    public KafkaConsumerService(FogProcessorConfig config, MongoStorageService storageService) {
         this.config = Objects.requireNonNull(config, "Configuration cannot be null");
-        initializeConsumer();
-        initializeMongo();
+        this.storageService = storageService;
+        this.consumer = initializeConsumer(config);
     }
 
     /**
      * Initializes the KafkaConsumer instance based on configuration.
      */
-    private void initializeConsumer() {
+    private KafkaConsumer<String, String> initializeConsumer(FogProcessorConfig config) {
         Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getKafkaBrokers());
         props.put(ConsumerConfig.GROUP_ID_CONFIG, config.getKafkaGroupId());
@@ -55,27 +58,10 @@ public class KafkaConsumerService implements AutoCloseable {
 
         try {
             LOGGER.info("Initializing Kafka Consumer for topic: {}", config.getKafkaTopic());
-            this.consumer = new KafkaConsumer<>(props);
-            this.consumer.subscribe(Collections.singletonList(config.getKafkaTopic()));
+            return new KafkaConsumer<>(props);
         } catch (Exception e) {
             LOGGER.error("Failed to initialize Kafka Consumer: {}", e.getMessage(), e);
-            this.consumer = null;
-        }
-    }
-
-    /**
-     * Initializes MongoDB connection.
-     */
-    private void initializeMongo() {
-        try {
-            LOGGER.info("Connecting to MongoDB...");
-            var mongoClient = MongoClients.create("mongodb://localhost:27017"); // Reemplaza con tu URI
-            this.database = mongoClient.getDatabase("fogDatabase"); // Nombre de la base de datos
-            this.collection = database.getCollection("sensorData"); // Nombre de la colección
-            LOGGER.info("Connected to MongoDB. Using database: 'fogDatabase', collection: 'sensorData'");
-        } catch (Exception e) {
-            LOGGER.error("Failed to connect to MongoDB: {}", e.getMessage(), e);
-            throw new RuntimeException("MongoDB connection failed");
+            return null;
         }
     }
 
@@ -87,30 +73,25 @@ public class KafkaConsumerService implements AutoCloseable {
             LOGGER.warn("Kafka consumer is not initialized. Cannot listen to topic '{}'.", config.getKafkaTopic());
             return;
         }
+        LOGGER.info("Starting Kafka consumer for topic: {}", config.getKafkaTopic());
+        consumer.subscribe(Collections.singletonList(config.getKafkaTopic()));
 
         try {
-            LOGGER.info("Listening for Kafka messages...");
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<String, String> record : records) {
-                    LOGGER.info("Received Kafka message: Key=[{}], Value=[{}], Partition=[{}], Offset=[{}]",
-                            record.key(), record.value(), record.partition(), record.offset());
-
-                    // Create a MongoDB document
-                    Document sensorData = new Document("key", record.key())
+                    LOGGER.debug("Received Kafka message: Key=[{}] - Value=[{}]",
+                            record.key(), record.value());
+                    Document doc = new Document("key", record.key())
                             .append("value", record.value())
-                            .append("partition", record.partition())
-                            .append("offset", record.offset())
-                            .append("timestamp", System.currentTimeMillis());
+                            .append("timestamp", Instant.now().getEpochSecond());
 
-                    // Insert document into MongoDB
-                    collection.insertOne(sensorData);
-                    LOGGER.info("Message saved to MongoDB successfully.");
+                    storageService.saveSensorData(doc);
                 }
-                consumer.commitAsync(); // Commit offsets asynchronously
+                consumer.commitAsync();
             }
         } catch (Exception e) {
-            LOGGER.error("Error during Kafka message processing: {}", e.getMessage(), e);
+            LOGGER.error("Kafka listener failed: {}", e.getMessage(), e);
         }
     }
 

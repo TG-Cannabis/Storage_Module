@@ -66,7 +66,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.tgcannabis.batch_processor.BatchProcessorApplication</mainClass>
+                    <mainClass>com.tgcannabis.storage_module.StorageModuleApplication</mainClass>
                 </configuration>
 
                 <executions>

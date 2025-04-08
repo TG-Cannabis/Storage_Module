@@ -1,6 +1,7 @@
 package com.tgcannabis.storage_module.config;
 
 import io.github.cdimascio.dotenv.Dotenv;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,8 +9,8 @@ import org.slf4j.LoggerFactory;
  * Loads and holds configuration parameters for the Fog Processor application.
  * Reads configuration from environment variables or a .env file.
  */
+@Getter
 public class FogProcessorConfig {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(FogProcessorConfig.class);
 
     // Kafka Configuration
@@ -34,27 +35,19 @@ public class FogProcessorConfig {
         logConfiguration();
     }
 
-    // --- Getters ---
-    public String getKafkaBrokers() { return kafkaBrokers; }
-    public String getKafkaTopic() { return kafkaTopic; }
-    public String getKafkaGroupId() { return kafkaGroupId; }
-
-    // --- Helper Methods ---
-
     /**
-     * Gets a value from Dotenv or system environment, returning a default if not found.
+     * Gets a value from System env variables (Or Dotenv file as fallback), returning a default if not found.
      * @param dotenv Dotenv instance
      * @param varName Environment variable name
      * @param defaultValue Default value if not found
      * @return The value found or the default value
      */
     private String getEnv(Dotenv dotenv, String varName, String defaultValue) {
-        String value = dotenv.get(varName);
-        if (value == null || value.trim().isEmpty()) {
-            LOGGER.warn("Environment variable '{}' not found or empty, using default: '{}'", varName, defaultValue);
-            return defaultValue;
-        }
-        return value;
+        String value = System.getenv(varName);
+        if (value != null) return value;
+
+        value = dotenv.get(varName);
+        return value != null ? value : defaultValue;
     }
 
     /**
