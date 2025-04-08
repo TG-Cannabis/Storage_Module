@@ -17,11 +17,7 @@ public class StorageModuleApplication {
 
         FogProcessorConfig config = new FogProcessorConfig();
 
-        MongoStorageService mongoStorageService = new MongoStorageService(
-                "mongodb://localhost:21707",
-                "fogDatabase",
-                "sensorData"
-        );
+        MongoStorageService mongoStorageService = new MongoStorageService(config);
 
         try (KafkaConsumerService consumer = new KafkaConsumerService(config, mongoStorageService)) {
             consumer.listen();
