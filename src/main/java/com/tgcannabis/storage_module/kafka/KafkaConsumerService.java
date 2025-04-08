@@ -1,7 +1,10 @@
 package com.tgcannabis.storage_module.kafka;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import com.mongodb.client.MongoClient;
 import com.tgcannabis.storage_module.config.FogProcessorConfig;
+import com.tgcannabis.storage_module.model.SensorData;
 import com.tgcannabis.storage_module.mongo.MongoStorageService;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -31,7 +34,7 @@ public class KafkaConsumerService implements AutoCloseable {
 
     private final FogProcessorConfig config;
     private KafkaConsumer<String, String> consumer;
-    private MongoStorageService storageService;
+    private final MongoStorageService storageService;
 
     private MongoCollection<Document> collection;
 
@@ -73,22 +76,39 @@ public class KafkaConsumerService implements AutoCloseable {
             LOGGER.warn("Kafka consumer is not initialized. Cannot listen to topic '{}'.", config.getKafkaTopic());
             return;
         }
+
         LOGGER.info("Starting Kafka consumer for topic: {}", config.getKafkaTopic());
         consumer.subscribe(Collections.singletonList(config.getKafkaTopic()));
+        Gson gson = new Gson();
 
         try {
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<String, String> record : records) {
-                    LOGGER.debug("Received Kafka message: Key=[{}] - Value=[{}]",
-                            record.key(), record.value());
-                    Document doc = new Document("key", record.key())
-                            .append("value", record.value())
-                            .append("timestamp", Instant.now().getEpochSecond());
+                    try {
+                        SensorData sensorData = gson.fromJson(record.value(), SensorData.class);
+                        LOGGER.debug("Deserialized sensor data: {}", sensorData);
 
-                    storageService.saveSensorData(doc);
+                        Document doc = new Document("sensorType", sensorData.getSensorName().getSensorType())
+                                .append("location", sensorData.getSensorName().getLocation())
+                                .append("sensorId", sensorData.getSensorName().getId())
+                                .append("value", sensorData.getValue())
+                                .append("timestamp", sensorData.getTimestamp())
+                                .append("savedAt", Instant.now().getEpochSecond());
+
+                        storageService.saveSensorData(doc);
+                    } catch (JsonSyntaxException e) {
+                        LOGGER.error("Invalid JSON in Kafka message: {}", record.value(), e);
+                    } catch (Exception e) {
+                        LOGGER.error("Failed to process Kafka message: {}", record.value(), e);
+                    }
                 }
                 consumer.commitAsync();
+
+                if (Thread.currentThread().isInterrupted()) {
+                    LOGGER.warn("Kafka listener thread interrupted. Exiting loop.");
+                    break;
+                }
             }
         } catch (Exception e) {
             LOGGER.error("Kafka listener failed: {}", e.getMessage(), e);
