@@ -90,7 +90,7 @@ public class KafkaConsumerService implements AutoCloseable {
                                 .append("sensorId", sensorData.getSensorId())
                                 .append("value", sensorData.getValue())
                                 .append("timestamp", sensorData.getTimestamp())
-                                .append("savedAt", Instant.now().getEpochSecond());
+                                .append("savedAt", Instant.now().toEpochMilli());
 
                         storageService.saveSensorData(doc);
                     } catch (JsonSyntaxException e) {
