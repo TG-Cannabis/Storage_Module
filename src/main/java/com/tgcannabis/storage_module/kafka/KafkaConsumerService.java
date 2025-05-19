@@ -2,7 +2,6 @@ package com.tgcannabis.storage_module.kafka;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-import com.mongodb.client.MongoClient;
 import com.tgcannabis.storage_module.config.FogProcessorConfig;
 import com.tgcannabis.storage_module.model.SensorData;
 import com.tgcannabis.storage_module.mongo.MongoStorageService;
@@ -14,9 +13,6 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 
 import java.time.Duration;
@@ -26,7 +22,8 @@ import java.util.Objects;
 import java.util.Properties;
 
 /**
- * Handles consuming messages from the configured Apache Kafka topic and saving to MongoDB.
+ * Handles consuming messages from the configured Apache Kafka topic and saving
+ * to MongoDB.
  */
 public class KafkaConsumerService implements AutoCloseable {
 
@@ -35,8 +32,6 @@ public class KafkaConsumerService implements AutoCloseable {
     private final FogProcessorConfig config;
     private KafkaConsumer<String, String> consumer;
     private final MongoStorageService storageService;
-
-    private MongoCollection<Document> collection;
 
     /**
      * Constructs the Kafka Service.
@@ -69,7 +64,8 @@ public class KafkaConsumerService implements AutoCloseable {
     }
 
     /**
-     * Listens and processes messages from the Kafka topic and saves them to MongoDB.
+     * Listens and processes messages from the Kafka topic and saves them to
+     * MongoDB.
      */
     public void listen() {
         if (this.consumer == null) {
@@ -89,9 +85,9 @@ public class KafkaConsumerService implements AutoCloseable {
                         SensorData sensorData = gson.fromJson(record.value(), SensorData.class);
                         LOGGER.debug("Deserialized sensor data: {}", sensorData);
 
-                        Document doc = new Document("sensorType", sensorData.getSensorName().getSensorType())
-                                .append("location", sensorData.getSensorName().getLocation())
-                                .append("sensorId", sensorData.getSensorName().getId())
+                        Document doc = new Document("sensorType", sensorData.getSensorType())
+                                .append("location", sensorData.getLocation())
+                                .append("sensorId", sensorData.getSensorId())
                                 .append("value", sensorData.getValue())
                                 .append("timestamp", sensorData.getTimestamp())
                                 .append("savedAt", Instant.now().getEpochSecond());
