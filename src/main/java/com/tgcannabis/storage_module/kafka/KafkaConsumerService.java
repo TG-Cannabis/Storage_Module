@@ -30,7 +30,7 @@ public class KafkaConsumerService implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaConsumerService.class);
 
     private final FogProcessorConfig config;
-    private KafkaConsumer<String, String> consumer;
+    KafkaConsumer<String, String> consumer;
     private final MongoStorageService storageService;
 
     /**
@@ -44,10 +44,16 @@ public class KafkaConsumerService implements AutoCloseable {
         this.consumer = initializeConsumer(config);
     }
 
+    public KafkaConsumerService(FogProcessorConfig config, MongoStorageService storageService, KafkaConsumer<String, String> consumer) {
+        this.config = Objects.requireNonNull(config, "Configuration cannot be null");
+        this.storageService = storageService;
+        this.consumer = consumer;
+    }
+
     /**
      * Initializes the KafkaConsumer instance based on configuration.
      */
-    private KafkaConsumer<String, String> initializeConsumer(FogProcessorConfig config) {
+    KafkaConsumer<String, String> initializeConsumer(FogProcessorConfig config) {
         Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getKafkaBrokers());
         props.put(ConsumerConfig.GROUP_ID_CONFIG, config.getKafkaGroupId());
@@ -69,7 +75,12 @@ public class KafkaConsumerService implements AutoCloseable {
      */
     public void listen() {
         if (this.consumer == null) {
-            LOGGER.warn("Kafka consumer is not initialized. Cannot listen to topic '{}'.", config.getKafkaTopic());
+            LOGGER.warn("Kafka consumer is not initialized. Attempting to reinitialize.");
+            this.consumer = initializeConsumer(config);
+        }
+
+        if (this.consumer == null) {
+            LOGGER.error("Kafka consumer could not be initialized. Aborting listen operation.");
             return;
         }
 

@@ -12,11 +12,10 @@ import org.slf4j.LoggerFactory;
 public class StorageModuleApplication {
     private static final Logger LOGGER = LoggerFactory.getLogger(StorageModuleApplication.class);
 
-    public static void main(String[] args) {
+    public void run() {
         LOGGER.info("Starting Kafka Consumer...");
 
         FogProcessorConfig config = new FogProcessorConfig();
-
         MongoStorageService mongoStorageService = new MongoStorageService(config);
 
         try (KafkaConsumerService consumer = new KafkaConsumerService(config, mongoStorageService)) {
@@ -24,6 +23,10 @@ public class StorageModuleApplication {
         }
 
         LOGGER.info("Kafka Consumer stopped.");
+    }
+
+    public static void main(String[] args) {
+        new StorageModuleApplication().run();
     }
 }
 

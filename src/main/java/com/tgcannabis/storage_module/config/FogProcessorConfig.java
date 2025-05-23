@@ -23,15 +23,20 @@ public class FogProcessorConfig {
     private final String mongoDatabase;
     private final String mongoCollection;
 
+    private final Dotenv dotenv;
+
     /**
-     * Loads configuration using Dotenv library, looking for a .env file
-     * in the classpath or project root, and falling back to environment variables.
+     * Default constructor: loads configuration using Dotenv from file or environment.
      */
     public FogProcessorConfig() {
-        // Configure Dotenv to search in standard places and ignore missing file
-        Dotenv dotenv = Dotenv.configure()
-                .ignoreIfMissing() // Don't fail if .env is not present
-                .load();
+        this(Dotenv.configure().ignoreIfMissing().load());
+    }
+
+    /**
+     * Constructor for testability: injects a custom Dotenv instance.
+     */
+    public FogProcessorConfig(Dotenv dotenv) {
+        this.dotenv = dotenv;
 
         // Kafka
         kafkaBrokers = getEnv(dotenv, "KAFKA_BROKERS", "localhost:9093");
