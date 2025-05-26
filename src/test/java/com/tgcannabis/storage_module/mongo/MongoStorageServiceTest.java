@@ -16,7 +16,6 @@ import static org.mockito.Mockito.*;
 class MongoStorageServiceTest {
     private FogProcessorConfig config;
     private MongoClient mockClient;
-    private MongoDatabase mockDatabase;
     private MongoCollection<Document> mockCollection;
 
     @BeforeEach
@@ -29,7 +28,7 @@ class MongoStorageServiceTest {
 
         // Mock MongoDB classes
         mockClient = mock(MongoClient.class);
-        mockDatabase = mock(MongoDatabase.class);
+        MongoDatabase mockDatabase = mock(MongoDatabase.class);
         mockCollection = mock(MongoCollection.class);
 
         when(mockClient.getDatabase("testDb")).thenReturn(mockDatabase);
