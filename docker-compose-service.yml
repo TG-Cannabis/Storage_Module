@@ -1,0 +1,13 @@
+services:
+  storage-module:
+    build: .
+    container_name: storage-module
+    restart: on-failure
+    environment:
+      KAFKA_BROKERS: ${KAFKA_BROKERS}
+      KAFKA_TOPIC: ${KAFKA_TOPIC}
+      KAFKA_CLIENT_ID: ${KAFKA_CLIENT_ID}
+
+      MONGO_URI: ${MONGO_URI}
+      MONGO_DATABASE: ${MONGO_DATABASE}
+      MONGO_COLLECTION: ${MONGO_COLLECTION}
